@@ -224,9 +224,16 @@ function playBGM() {
 
 function stopBGM() { clearTimeout(bgmTimeout); bgmTimeout = null; }
 
-/* iOS audio unlock — cria e desbloqueia o AudioContext no PRIMEIRO toque da página,
-   antes de qualquer onclick/startGame, para que o contexto já esteja running */
+/* iOS audio unlock — cria e desbloqueia o AudioContext no PRIMEIRO toque da página.
+   O elemento <audio> silencioso força iOS a usar sessão "media playback",
+   que ignora o mute switch físico (alavanca de silêncio). */
+const _silAudio = document.createElement('audio');
+_silAudio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+_silAudio.loop = true;
+_silAudio.volume = 0.001;
+
 function _iosAudioUnlock() {
+  _silAudio.play().catch(() => {});
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const buf = audioCtx.createBuffer(1, 1, 22050);
   const src = audioCtx.createBufferSource();
