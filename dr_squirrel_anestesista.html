@@ -688,61 +688,88 @@ function drawEnemy(e) {
   if (!e.alive) return;
   const x = e.x - camera.x;
   if (x + e.w < 0 || x > canvas.width) return;
-  const bob = e.asleep ? 2 : (e.frame === 0 ? 0 : 2);
-  const ey = e.y + (e.asleep ? 4 : 0);
 
   ctx.save();
-  if (e.asleep) ctx.globalAlpha = 0.87;
 
-  ctx.fillStyle = e.asleep ? '#a8d8ea' : '#e8f4fd';
+  if (e.asleep) {
+    /* ── DEITADO ── */
+    ctx.globalAlpha = 0.87;
+    const gy = e.y + e.h; // nível do chão
+
+    /* almofada */
+    ctx.fillStyle = '#e8f4fd';
+    ctx.beginPath(); ctx.roundRect(x - 3, gy - 19, 22, 17, 5); ctx.fill();
+
+    /* corpo/bata (horizontal) */
+    ctx.fillStyle = '#a8d8ea';
+    ctx.beginPath(); ctx.roundRect(x + 11, gy - 15, e.h - 6, 13, [0, 6, 6, 0]); ctx.fill();
+    ctx.fillStyle = 'rgba(100,160,200,0.28)';
+    for (let i = 0; i < 3; i++) ctx.fillRect(x + 15 + i * 9, gy - 13, 4, 9);
+
+    /* cabeça */
+    ctx.fillStyle = '#f9dfc0';
+    ctx.beginPath(); ctx.arc(x + 8, gy - 9, 9, 0, Math.PI * 2); ctx.fill();
+    /* cabelo */
+    ctx.fillStyle = '#8B6914';
+    ctx.beginPath(); ctx.arc(x + 8, gy - 9, 9, Math.PI, 0); ctx.fill();
+    /* orelha */
+    ctx.fillStyle = '#f9dfc0';
+    ctx.fillRect(x + 16, gy - 12, 4, 6);
+
+    /* olhos fechados */
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x + 4, gy - 9); ctx.lineTo(x + 8, gy - 9); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 9, gy - 9); ctx.lineTo(x + 13, gy - 9); ctx.stroke();
+
+    /* boca */
+    ctx.fillStyle = '#c0392b';
+    ctx.beginPath(); ctx.ellipse(x + 8, gy - 4, 3, 2, 0, 0, Math.PI); ctx.fill();
+
+    ctx.restore();
+
+    /* ZZZ acima (em coords de ecrã) */
+    if (e.sleepTimer > 0) {
+      const phase = Math.floor(e.sleepTimer / 30) % 3;
+      ctx.save();
+      ctx.globalAlpha = 0.75;
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${10 + phase * 2}px Courier New`;
+      ctx.textAlign = 'center';
+      ctx.fillText('z'.repeat(phase + 1), x + e.h / 2, e.y + e.h - 24 - phase * 4);
+      ctx.restore();
+    }
+    return;
+  }
+
+  /* ── DE PÉ (acordado) ── */
+  const bob = e.frame === 0 ? 0 : 2;
+  const ey = e.y;
+
+  ctx.fillStyle = '#e8f4fd';
   ctx.fillRect(x + 2, ey + 12 + bob, e.w - 4, e.h - 12);
-
   ctx.fillStyle = 'rgba(100,160,200,0.22)';
   for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++)
     ctx.fillRect(x + 5 + c * 10, ey + 16 + r * 8 + bob, 3, 3);
-
   ctx.fillStyle = '#f9dfc0';
   ctx.beginPath(); ctx.roundRect(x + 3, ey - 2 + bob, e.w - 6, 16, [6]); ctx.fill();
-
   ctx.fillStyle = '#8B6914';
   ctx.fillRect(x + 3, ey - 7 + bob, e.w - 6, 7);
   ctx.fillRect(x + 1, ey - 5 + bob, 4, 5); ctx.fillRect(x + e.w - 5, ey - 5 + bob, 4, 5);
-
-  if (e.asleep) {
-    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(x + 7, ey + 4 + bob); ctx.lineTo(x + 11, ey + 4 + bob); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x + e.w - 11, ey + 4 + bob); ctx.lineTo(x + e.w - 7, ey + 4 + bob); ctx.stroke();
-    ctx.fillStyle = '#c0392b';
-    ctx.beginPath(); ctx.ellipse(x + e.w / 2, ey + 9 + bob, 3, 2, 0, 0, Math.PI); ctx.fill();
-  } else {
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(x + 6, ey + 2 + bob, 6, 6); ctx.fillRect(x + e.w - 12, ey + 2 + bob, 6, 6);
-    ctx.fillStyle = '#1a6fa8';
-    ctx.fillRect(x + 8, ey + 3 + bob, 3, 3); ctx.fillRect(x + e.w - 10, ey + 3 + bob, 3, 3);
-    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(x + 6, ey + 1 + bob); ctx.lineTo(x + 12, ey + 3 + bob); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x + e.w - 6, ey + 1 + bob); ctx.lineTo(x + e.w - 12, ey + 3 + bob); ctx.stroke();
-    ctx.fillStyle = '#c0392b';
-    ctx.beginPath(); ctx.ellipse(x + e.w / 2, ey + 9 + bob, 3, 3, 0, 0, Math.PI * 2); ctx.fill();
-  }
-
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x + 6, ey + 2 + bob, 6, 6); ctx.fillRect(x + e.w - 12, ey + 2 + bob, 6, 6);
+  ctx.fillStyle = '#1a6fa8';
+  ctx.fillRect(x + 8, ey + 3 + bob, 3, 3); ctx.fillRect(x + e.w - 10, ey + 3 + bob, 3, 3);
+  ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x + 6, ey + 1 + bob); ctx.lineTo(x + 12, ey + 3 + bob); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + e.w - 6, ey + 1 + bob); ctx.lineTo(x + e.w - 12, ey + 3 + bob); ctx.stroke();
+  ctx.fillStyle = '#c0392b';
+  ctx.beginPath(); ctx.ellipse(x + e.w / 2, ey + 9 + bob, 3, 3, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = 'rgba(150,180,200,0.45)';
   ctx.fillRect(x + e.w - 4, ey - 14 + bob, 2, e.h + 12);
   ctx.fillStyle = 'rgba(180,220,255,0.55)';
   ctx.beginPath(); ctx.arc(x + e.w - 3, ey - 14 + bob, 4, 0, Math.PI * 2); ctx.fill();
 
   ctx.restore();
-
-  if (e.asleep && e.sleepTimer > 0) {
-    const phase = Math.floor(e.sleepTimer / 30) % 3;
-    ctx.save();
-    ctx.globalAlpha = 0.75;
-    ctx.fillStyle = '#fff';
-    ctx.font = `bold ${10 + phase * 2}px Courier New`;
-    ctx.textAlign = 'center';
-    ctx.fillText('z'.repeat(phase + 1), x + e.w / 2 - 8 - phase * 4, ey - 16 - phase * 4);
-    ctx.restore();
-  }
 }
 
 function drawPlayer() {
