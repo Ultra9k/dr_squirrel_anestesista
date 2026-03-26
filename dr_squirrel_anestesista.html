@@ -445,12 +445,28 @@ function updateParticles() {
   });
 }
 
+function getSafeRespawnX() {
+  const candidates = [60, worldW * 0.35, worldW * 0.65];
+  let bestX = candidates[0];
+  let bestDist = -1;
+  candidates.forEach(cx => {
+    let minDist = Infinity;
+    enemies.forEach(e => {
+      if (!e.alive) return;
+      const dist = Math.abs(cx - (e.x + e.w / 2));
+      if (dist < minDist) minDist = dist;
+    });
+    if (minDist > bestDist) { bestDist = minDist; bestX = cx; }
+  });
+  return bestX;
+}
+
 function loseLife() {
   lives--;
   updateHUD();
   spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ff6b6b', 10);
   if (lives <= 0) { gameOver(); return; }
-  player.invincible = 90; player.x = 60; player.y = canvas.height - 150; player.vx = 0; player.vy = 0;
+  player.invincible = 90; player.x = getSafeRespawnX(); player.y = canvas.height - 150; player.vx = 0; player.vy = 0;
 }
 
 function gameOver() {
