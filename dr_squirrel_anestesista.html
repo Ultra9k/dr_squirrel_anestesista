@@ -224,17 +224,17 @@ function playBGM() {
 
 function stopBGM() { clearTimeout(bgmTimeout); bgmTimeout = null; }
 
-function unlockAudioIOS() {
-  if (!audioCtx) return;
+/* iOS audio unlock — cria e desbloqueia o AudioContext no PRIMEIRO toque da página,
+   antes de qualquer onclick/startGame, para que o contexto já esteja running */
+function _iosAudioUnlock() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const buf = audioCtx.createBuffer(1, 1, 22050);
   const src = audioCtx.createBufferSource();
-  src.buffer = buf;
-  src.connect(audioCtx.destination);
-  src.start(0);
+  src.buffer = buf; src.connect(audioCtx.destination); src.start(0);
+  audioCtx.resume();
 }
-document.addEventListener('touchstart', () => {
-  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().then(unlockAudioIOS);
-}, { passive: true });
+document.addEventListener('touchstart', _iosAudioUnlock, { once: true, passive: true });
+document.addEventListener('mousedown', _iosAudioUnlock, { once: true, passive: true });
 
 function updateHUD() {
   document.getElementById('score-display').textContent = score;
@@ -971,7 +971,8 @@ function startGame() {
   resize(); initLevel();
   cancelAnimationFrame(raf);
   loop();
-  audioCtx.resume().then(() => { stopBGM(); playBGM(); });
+  stopBGM();
+  audioCtx.resume().then(playBGM);
 }
 
 function setupControls() {
