@@ -224,6 +224,18 @@ function playBGM() {
 
 function stopBGM() { clearTimeout(bgmTimeout); bgmTimeout = null; }
 
+function unlockAudioIOS() {
+  if (!audioCtx) return;
+  const buf = audioCtx.createBuffer(1, 1, 22050);
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  src.connect(audioCtx.destination);
+  src.start(0);
+}
+document.addEventListener('touchstart', () => {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().then(unlockAudioIOS);
+}, { passive: true });
+
 function updateHUD() {
   document.getElementById('score-display').textContent = score;
   document.getElementById('level-display').textContent = level;
@@ -959,7 +971,7 @@ function startGame() {
   resize(); initLevel();
   cancelAnimationFrame(raf);
   loop();
-  stopBGM(); playBGM();
+  audioCtx.resume().then(() => { stopBGM(); playBGM(); });
 }
 
 function setupControls() {
@@ -968,7 +980,7 @@ function setupControls() {
   Object.keys(down).forEach(id => {
     const el = document.getElementById(id);
     const on = () => el.classList.add('pressed'), off = () => el.classList.remove('pressed');
-    el.addEventListener('touchstart', e => { e.preventDefault(); down[id](); on(); }, { passive: false });
+    el.addEventListener('touchstart', e => { e.preventDefault(); if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); down[id](); on(); }, { passive: false });
     el.addEventListener('touchend',   e => { e.preventDefault(); up[id](); off(); }, { passive: false });
     el.addEventListener('touchcancel',e => { e.preventDefault(); up[id](); off(); }, { passive: false });
     el.addEventListener('mousedown', () => { down[id](); on(); });
