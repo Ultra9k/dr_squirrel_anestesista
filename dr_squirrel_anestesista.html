@@ -207,19 +207,40 @@ function playBGM() {
   if (!audioCtx || gameState !== 'playing') return;
   clearTimeout(bgmTimeout);
   const ac = audioCtx, t0 = ac.currentTime + 0.05;
-  const b = 60 / 122; // beat at 122 BPM
-  /* melody — square wave, soft */
+  const b = 60 / 122;
   const mel = [
     [523,1],[659,1],[784,1],[659,1],[523,1],[587,1],[392,2],
     [392,1],[440,1],[523,1],[440,1],[392,1],[330,1],[262,2]
   ];
-  /* bass — triangle wave */
   const bas = [[131,4],[110,4],[131,4],[98,4]];
   let t = t0, total = 0;
   mel.forEach(([f,bt]) => { tone(f, bt*b*0.78, 'square', 0.055, t); t += bt*b; total += bt*b; });
   t = t0;
   bas.forEach(([f,bt]) => { tone(f, bt*b*0.65, 'triangle', 0.038, t); t += bt*b; });
   bgmTimeout = setTimeout(playBGM, (total - 0.12) * 1000);
+}
+
+function playFastBGM() {
+  if (!audioCtx || gameState !== 'playing' || !player || player.caffeinated <= 0) return;
+  clearTimeout(bgmTimeout);
+  const ac = audioCtx, t0 = ac.currentTime + 0.05;
+  const b = 60 / 210; // 210 BPM — frenético!
+  /* melodia acelerada */
+  const mel = [
+    [784,1],[1047,1],[880,1],[1047,1],[784,1],[698,1],[784,1],[659,1],
+    [698,1],[880,1],[784,1],[880,1],[698,1],[659,1],[523,2]
+  ];
+  /* baixo driving */
+  const bas = [[196,2],[196,2],[175,2],[196,2],[196,2],[175,2],[131,4]];
+  /* harmonia alta */
+  const harm = [[1568,2],[2094,2],[1760,2],[2094,2],[1568,2],[1397,2],[1047,4]];
+  let t = t0, total = 0;
+  mel.forEach(([f,bt]) => { tone(f, bt*b*0.55, 'square', 0.065, t); t += bt*b; total += bt*b; });
+  t = t0;
+  bas.forEach(([f,bt]) => { tone(f, bt*b*0.5, 'triangle', 0.05, t); t += bt*b; });
+  t = t0;
+  harm.forEach(([f,bt]) => { tone(f, bt*b*0.4, 'square', 0.025, t); t += bt*b; });
+  bgmTimeout = setTimeout(playFastBGM, (total - 0.1) * 1000);
 }
 
 function stopBGM() { clearTimeout(bgmTimeout); bgmTimeout = null; }
@@ -431,6 +452,7 @@ function updatePlayer() {
       player.caffeinated = 420;
       score += 20;
       sfx('coffee');
+      stopBGM(); playFastBGM();
       spawnParticles(c.x + c.w / 2, c.y + c.h / 2, '#c8860a', 14);
       particles.push({ x: c.x + c.w / 2, y: c.y - 4, vx: 0, vy: -1.1, life: 2.8, color: '#ff8c00', size: 32, isZzz: true, letter: 'COFFEE!!!' });
       updateHUD();
@@ -471,7 +493,7 @@ function updatePlayer() {
     });
   }
   if (player.invincible > 0) player.invincible--;
-  if (player.caffeinated > 0) player.caffeinated--;
+  if (player.caffeinated > 0) { player.caffeinated--; if (player.caffeinated === 0) { stopBGM(); playBGM(); } }
 
   if (Math.abs(player.vx) > 0.3 && player.onGround) {
     player.frameTimer++;
