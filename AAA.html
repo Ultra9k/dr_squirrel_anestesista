@@ -62,7 +62,7 @@ body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
 const GRAV=0.024, JVEL=0.44, SPD=0.13, MAX_AMMO=8;
 // ═══ STATE ═══
 let scene,cam,renderer,clock;
-let gameState='menu';
+let state='menu';
 let score=0,lives=3,level=1,ammo=5;
 let keys={},jumpP=false,shootP=false;
 let player=null,platforms=[],enemies=[],bullets=[],syringes=[],coffees=[],parts=[];
@@ -94,7 +94,7 @@ function sfx(n){
   if(n==='gameover'){[440,330,220,165].forEach((f,i)=>tone(f,.32,'sine',.15,t+i*.28));}
 }
 function playBGM(){
-  if(!audioCtx||gameState!=='playing')return;
+  if(!audioCtx||state!=='playing')return;
   clearTimeout(bgmTO);
   const ac=audioCtx,t0=ac.currentTime+.05,b=60/122;
   const mel=[[523,1],[659,1],[784,1],[659,1],[523,1],[587,1],[392,2],[392,1],[440,1],[523,1],[440,1],[392,1],[330,1],[262,2]];
@@ -105,7 +105,7 @@ function playBGM(){
   bgmTO=setTimeout(playBGM,(tot-.12)*1000);
 }
 function playFastBGM(){
-  if(!audioCtx||gameState!=='playing'||!player||player.caff<=0)return;
+  if(!audioCtx||state!=='playing'||!player||player.caff<=0)return;
   clearTimeout(bgmTO);
   const ac=audioCtx,t0=ac.currentTime+.05,b=60/210;
   const mel=[[784,1],[1047,1],[880,1],[1047,1],[784,1],[698,1],[784,1],[659,1],[698,1],[880,1],[784,1],[880,1],[698,1],[659,1],[523,2]];
@@ -152,11 +152,6 @@ function initThree(){
   const fill=new THREE.DirectionalLight(0x2244aa,.5);
   fill.position.set(-5,3,-8);scene.add(fill);
   clock=new THREE.Clock();
-  window.addEventListener('resize',()=>{
-    cam.aspect=window.innerWidth/window.innerHeight;
-    cam.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth,window.innerHeight);
-  });
 }
 // ═══ MESH HELPERS ═══
 const M=(w,h,d,c,em)=>new THREE.Mesh(
@@ -404,7 +399,7 @@ function spawnParts3D(x,y,col,n){
     const m=MS(.07+Math.random()*.1,col,col);
     m.position.set(x,y,(Math.random()-.5)*.6);scene.add(m);
     const a=Math.random()*Math.PI*2,s=.07+Math.random()*.14;
-    parts.push({mesh:m,vx:Math.cos(a)*s,vy:Math.sin(a)*s+.05,life:1});
+    parts.push({mesh:m,vx:Math.cos(a)*s,vy:Math.sin(a)*s+.05,vz:(Math.random()-.5)*.1,life:1,maxLife:1,isText:false});
   }
 }
 function spawnText3D(x,y,txt,col){
@@ -416,7 +411,7 @@ function spawnText3D(x,y,txt,col){
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
   sp.position.set(x,y+1.2,.5);sp.scale.set(5,1.25,1);
   scene.add(sp);
-  parts.push({mesh:sp,vx:0,vy:.028,life:2.4,isText:true});
+  parts.push({mesh:sp,vx:0,vy:.028,vz:0,life:2.4,maxLife:2.4,isText:true});
 }
 // ═══ ENEMY AI ═══
 function setSleepPose(e){
@@ -487,17 +482,17 @@ function updatePlayer(dt){
   if(!player)return;
   const caff=player.caff>0;
   const spd=caff?SPD*1.4:SPD;
-  if(keys['ArrowLeft']||keys['a']){player.vx-=1.1*dt*60;player.facing=-1;}
-  else if(keys['ArrowRight']||keys['d']){player.vx+=1.1*dt*60;player.facing=1;}
+  if(keys['ArrowLeft']||keys['KeyA']){player.vx-=1.1*dt*60;player.facing=-1;}
+  else if(keys['ArrowRight']||keys['KeyD']){player.vx+=1.1*dt*60;player.facing=1;}
   else player.vx*=Math.pow(.78,dt*60);
   player.vx=Math.max(-spd,Math.min(spd,player.vx));
-  const jump=keys[' ']||keys['ArrowUp']||keys['w'];
+  const jump=keys['Space']||keys['ArrowUp']||keys['KeyW'];
   if(jump&&!jumpP&&player.jumpsLeft>0){
     player.vy=JVEL+(player.jumpsLeft<2?.04:0);player.jumpsLeft--;jumpP=true;
     sfx('jump');spawnParts3D(player.x,player.y,0xaaffc4,6);
   }
   if(!jump)jumpP=false;
-  const shoot=keys['x']||keys['z'];
+  const shoot=keys['KeyX']||keys['KeyZ'];
   if(shoot&&!shootP){shootBullet();shootP=true;}
   if(!shoot)shootP=false;
   player.vy-=GRAV*dt*60;player.vy=Math.max(player.vy,-.55);
@@ -579,9 +574,9 @@ function updatePlayer(dt){
 // ── CAMERA ──────────────────────────────────────────────────────────────────
 function updateCamera(dt){
   const tx=player.x, ty=player.y+2.5;
-  camera.position.x+=(tx-camera.position.x)*Math.min(1,dt*5);
-  camera.position.y+=(ty-camera.position.y)*Math.min(1,dt*4);
-  camera.lookAt(camera.position.x,camera.position.y-2.5,0);
+  cam.position.x+=(tx-cam.position.x)*Math.min(1,dt*5);
+  cam.position.y+=(ty-cam.position.y)*Math.min(1,dt*4);
+  cam.lookAt(cam.position.x,cam.position.y-2.5,0);
 }
 
 // ── LIFE / GAME-OVER ────────────────────────────────────────────────────────
@@ -591,7 +586,7 @@ function loseLife(){
   const sx=getSafeX();
   player.x=sx;player.y=10;player.vx=0;player.vy=0;
   player.mesh.position.set(player.x,player.y,0);
-  sfx('die');spawnParts3D(sx,10,0xff4444,14);
+  sfx('hurt');spawnParts3D(sx,10,0xff4444,14);
   if(lives<=0) gameOver();
 }
 
@@ -622,7 +617,6 @@ function startGame(){
 }
 
 // ── INPUT ────────────────────────────────────────────────────────────────────
-const keys={};
 document.addEventListener('keydown',e=>{
   if(state!=='playing')return;
   keys[e.code]=true;
@@ -637,7 +631,7 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{keys[e.code]=false;});
 
 function setupMobileControls(){
-  const map={btnLeft:'left',btnRight:'right',btnJump:'jump',btnShoot:'shoot'};
+  const map={bl:'left',br:'right',bj:'jump',bsh:'shoot'};
   Object.entries(map).forEach(([id,act])=>{
     const el=document.getElementById(id);
     if(!el)return;
@@ -669,43 +663,37 @@ function animate(ts){
     // horizontal input
     const left=keys['ArrowLeft']||keys['KeyA'];
     const right=keys['ArrowRight']||keys['KeyD'];
-    const spd=player.caff>0?SPEED*1.6:SPEED;
-    if(left){player.vx=-spd;player.facing=-1;}
-    if(right){player.vx=spd;player.facing=1;}
-    if(!left&&!right)player.vx*=0.7;
+    const spd=player&&player.caff>0?SPD*1.6:SPD;
+    if(left&&player){player.vx=-spd;player.facing=-1;}
+    if(right&&player){player.vx=spd;player.facing=1;}
     updatePlayer(dt);
     updateEnemies(dt);
     updateBullets(dt);
     updateCamera(dt);
-    // particles
-    for(let i=parts3d.length-1;i>=0;i--){
-      const p=parts3d[i];
-      p.vy-=9.8*dt;
-      p.mesh.position.x+=p.vx*dt;
-      p.mesh.position.y+=p.vy*dt;
-      p.mesh.position.z+=p.vz*dt;
+    // particles & text sprites
+    for(let i=parts.length-1;i>=0;i--){
+      const p=parts[i];
       p.life-=dt;
-      const s=Math.max(0,p.life/p.maxLife);
-      p.mesh.scale.setScalar(s*.22);
-      if(p.life<=0){scene.remove(p.mesh);parts3d.splice(i,1);}
-    }
-    // text sprites
-    for(let i=textSprites.length-1;i>=0;i--){
-      const t=textSprites[i];
-      t.mesh.position.y+=dt*1.4;
-      t.life-=dt;
-      const s=Math.max(0,t.life/t.maxLife);
-      t.mesh.material.opacity=s;
-      if(t.life<=0){scene.remove(t.mesh);textSprites.splice(i,1);}
+      if(p.isText){
+        p.mesh.position.y+=dt*1.4;
+        p.mesh.material.opacity=Math.max(0,p.life/p.maxLife);
+      } else {
+        p.vy-=9.8*dt;
+        p.mesh.position.x+=p.vx*dt;
+        p.mesh.position.y+=p.vy*dt;
+        p.mesh.position.z+=p.vz*dt;
+        p.mesh.scale.setScalar(Math.max(0,p.life/p.maxLife)*.22);
+      }
+      if(p.life<=0){scene.remove(p.mesh);parts.splice(i,1);}
     }
   }
-  renderer.render(scene,camera);
+  renderer.render(scene,cam);
 }
 
 // ── RESIZE ───────────────────────────────────────────────────────────────────
 window.addEventListener('resize',()=>{
-  camera.aspect=window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
+  cam.aspect=window.innerWidth/window.innerHeight;
+  cam.updateProjectionMatrix();
   renderer.setSize(window.innerWidth,window.innerHeight);
 });
 
